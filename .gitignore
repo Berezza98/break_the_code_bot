@@ -1,0 +1,5 @@
+node_modules
+dist
+.env
+games_db.sqlite
+session_db.sqlite
