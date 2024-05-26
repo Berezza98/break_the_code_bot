@@ -6,7 +6,7 @@ import { bot } from './bot';
 async function main() {
   try {
     await sequelize.authenticate();
-    await sequelize.sync();
+    await sequelize.sync({ alter: true });
 
     bot.launch();
   } catch (e) {
