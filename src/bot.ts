@@ -122,7 +122,11 @@ bot.action(COLORS, async (ctx, next) => {
 
   if (currentGame.fromId === from.id) return await next();
 
-  if (currentGame.status !== GameStatus.started) {
+  if (currentGame.status === GameStatus.created) {
+    return await ctx.answerCbQuery('Гра ще не створена ❗️');
+  }
+
+  if (!currentGame.toId) {
     return await ctx.answerCbQuery(`Натисніть кнопку "${JOIN_BTN}", щоб розпочати гру`);
   }
 
@@ -137,6 +141,8 @@ bot.action(COLORS, async (ctx, next) => {
   });
 
   console.log('LENGTH: ', splitEmoji(currentGame.currentCheckCombination).length);
+
+  await ctx.answerCbQuery(`Ваш код: ${currentGame.currentCheckCombination}`);
 
   const keyboard = Markup.inlineKeyboard([
     createColorsButtons(splitEmoji(currentGame.currentCheckCombination)),
@@ -212,8 +218,9 @@ bot.action(DELETE_BTN, async (ctx, next) => {
 
   if (currentGame.status !== GameStatus.started) return await next();
 
-  if (currentGame.fromId === from.id) return ctx.answerCbQuery(`Ви вже не можете стирати код ❗️`);
-  if (currentGame.currentCheckCombination.length === 0) return ctx.answerCbQuery(`Код повністю стертий`);
+  if (currentGame.fromId === from.id) return await ctx.answerCbQuery(`Ви вже не можете стирати код ❗️`);
+  if (!currentGame.toId) return await ctx.answerCbQuery(`Натисніть кнопку "${JOIN_BTN}", щоб розпочати гру`);
+  if (currentGame.currentCheckCombination.length === 0) return await ctx.answerCbQuery(`Код повністю стертий`);
 
   await currentGame.update({
     currentCheckCombination: splitEmoji(currentGame.currentCheckCombination).slice(0, -1).join(''),
@@ -280,8 +287,12 @@ bot.action(CHECK_CODE_BTN, async (ctx) => {
   const resultTemplate =
     rightColorTemplate.repeat(rightColorCount) + rightColorAndPlaceTemplate.repeat(rightColorAndPlaceCount);
 
+  const newCheckCombinations = currentGame.checkCombinations
+    ? `${currentGame.currentCheckCombination} - ${resultTemplate}`
+    : `${currentGame.checkCombinations}${CHECK_CODE_DIVIDER}${currentGame.currentCheckCombination} - ${resultTemplate}`;
+
   await currentGame.update({
-    checkCombinations: `${currentGame.checkCombinations}${CHECK_CODE_DIVIDER}${currentGame.currentCheckCombination} - ${resultTemplate}`,
+    checkCombinations: newCheckCombinations,
     currentCheckCombination: '',
   });
 

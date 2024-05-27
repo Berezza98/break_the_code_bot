@@ -1,7 +1,9 @@
 import { Game } from '../models/Game';
 import { CHECK_CODE_DIVIDER } from '../consts';
 
-export const getCheckCombinations = (currentGame: Game) => {
+export const getCheckCombinations = (currentGame: Game): string => {
+  if (!currentGame.checkCombinations) return '';
+
   return currentGame.checkCombinations
     .split(CHECK_CODE_DIVIDER)
     .map((el, i) => `${i + 1}. ${el}\n`)
