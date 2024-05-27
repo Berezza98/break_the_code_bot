@@ -4,7 +4,7 @@ import { SQLite } from '@telegraf/session/sqlite';
 import { MyContext, MySession } from './types';
 import { CHECK_CODE_DIVIDER, CODE_LENGTH, COLORS, SESSION_DB_FILE_NAME } from './consts';
 import { Game, GameStatus } from './models/Game';
-import { createColorsButtons, splitEmoji } from './helpers';
+import { compareCodes, createColorsButtons, getCheckCombinations, splitEmoji } from './helpers';
 import { translations } from './translations';
 
 const DELETE_BTN = '⬅️';
@@ -143,7 +143,7 @@ bot.action(COLORS, async (ctx, next) => {
     [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(CHECK_CODE_BTN, CHECK_CODE_BTN)],
   ]);
 
-  await ctx.editMessageText(translations.guessed_combinations, {
+  await ctx.editMessageText(translations.guessed_combinations + getCheckCombinations(currentGame), {
     ...keyboard,
   });
 });
@@ -204,7 +204,7 @@ bot.action(DELETE_BTN, async (ctx, next) => {
 
 // Стертя на етапі відгадування коду
 bot.action(DELETE_BTN, async (ctx, next) => {
-  const { currentGame } = ctx;
+  const { currentGame, from } = ctx;
 
   if (!currentGame) {
     return await ctx.answerCbQuery('Помилка гри, спробуйте створити нову гру');
@@ -212,10 +212,11 @@ bot.action(DELETE_BTN, async (ctx, next) => {
 
   if (currentGame.status !== GameStatus.started) return await next();
 
-  if (currentGame.code.length === 0) return ctx.answerCbQuery(`Код повністю стертий`);
+  if (currentGame.fromId === from.id) return ctx.answerCbQuery(`Ви вже не можете стирати код ❗️`);
+  if (currentGame.currentCheckCombination.length === 0) return ctx.answerCbQuery(`Код повністю стертий`);
 
   await currentGame.update({
-    currentCheckCombination: splitEmoji(currentGame.code).slice(0, -1).join(''),
+    currentCheckCombination: splitEmoji(currentGame.currentCheckCombination).slice(0, -1).join(''),
   });
 
   await ctx.answerCbQuery(`Ваш код: ${currentGame.currentCheckCombination}`);
@@ -268,17 +269,33 @@ bot.action(CHECK_CODE_BTN, async (ctx) => {
 
   await ctx.answerCbQuery('Перевірка коду...');
 
+  const rightColorTemplate = '⬜️';
+  const rightColorAndPlaceTemplate = '🟩';
+
+  const [rightColorCount, rightColorAndPlaceCount] = compareCodes(
+    currentGame.code,
+    currentGame.currentCheckCombination
+  );
+
+  const resultTemplate =
+    rightColorTemplate.repeat(rightColorCount) + rightColorAndPlaceTemplate.repeat(rightColorAndPlaceCount);
+
   await currentGame.update({
-    checkCombinations: `${currentGame.checkCombinations}${CHECK_CODE_DIVIDER}${currentGame.currentCheckCombination}`,
+    checkCombinations: `${currentGame.checkCombinations}${CHECK_CODE_DIVIDER}${currentGame.currentCheckCombination} - ${resultTemplate}`,
     currentCheckCombination: '',
   });
+
+  // Перевірка на перемогу
+  if (rightColorAndPlaceCount === CODE_LENGTH) {
+    return ctx.editMessageText(translations.you_won + getCheckCombinations(currentGame));
+  }
 
   const keyboard = Markup.inlineKeyboard([
     createColorsButtons([]),
     [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(CHECK_CODE_BTN, CHECK_CODE_BTN)],
   ]);
 
-  ctx.editMessageText(translations.guessed_combinations, {
+  ctx.editMessageText(translations.guessed_combinations + getCheckCombinations(currentGame), {
     ...keyboard,
   });
 });
