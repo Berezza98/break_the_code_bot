@@ -89,7 +89,7 @@ bot.action(COLORS, async (ctx, next) => {
   }
 
   if (splitEmoji(currentGame.code).includes(selectedColor)) {
-    return await ctx.answerCbQuery(`Код вже містить даний колір ${selectedColor}`);
+    return await ctx.answerCbQuery(`Код вже містить даний колір ${selectedColor}. Ваш код: ${currentGame.code}`);
   }
 
   await currentGame.update({
@@ -99,15 +99,6 @@ bot.action(COLORS, async (ctx, next) => {
   console.log('LENGTH: ', splitEmoji(currentGame.code).length);
 
   await ctx.answerCbQuery(`Ваш код: ${currentGame.code}`);
-
-  const keyboard = Markup.inlineKeyboard([
-    createColorsButtons(splitEmoji(currentGame.code)),
-    [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(START_BTN, START_BTN)],
-  ]);
-
-  await ctx.editMessageText(translations.think_of_a_code, {
-    ...keyboard,
-  });
 });
 
 // Логіка користувача, який приймає гру
@@ -136,6 +127,12 @@ bot.action(COLORS, async (ctx, next) => {
     );
   }
 
+  if (splitEmoji(currentGame.currentCheckCombination).includes(selectedColor)) {
+    return await ctx.answerCbQuery(
+      `Код вже містить даний колір ${selectedColor}. Ваш код: ${currentGame.currentCheckCombination}`
+    );
+  }
+
   await currentGame.update({
     currentCheckCombination: currentGame.currentCheckCombination + selectedColor,
   });
@@ -145,11 +142,13 @@ bot.action(COLORS, async (ctx, next) => {
   await ctx.answerCbQuery(`Ваш код: ${currentGame.currentCheckCombination}`);
 
   const keyboard = Markup.inlineKeyboard([
-    createColorsButtons(splitEmoji(currentGame.currentCheckCombination)),
+    createColorsButtons([]),
     [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(CHECK_CODE_BTN, CHECK_CODE_BTN)],
   ]);
 
-  await ctx.editMessageText(translations.guessed_combinations + getCheckCombinations(currentGame), {
+  const messageText = `${translations.guessed_combinations}${getCheckCombinations(currentGame)}\n${translations.current_code}${currentGame.currentCheckCombination}`;
+
+  await ctx.editMessageText(messageText, {
     ...keyboard,
   });
 });
@@ -197,15 +196,6 @@ bot.action(DELETE_BTN, async (ctx, next) => {
   });
 
   await ctx.answerCbQuery(`Ваш код: ${currentGame.code}`);
-
-  const keyboard = Markup.inlineKeyboard([
-    createColorsButtons(splitEmoji(currentGame.code)),
-    [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(START_BTN, START_BTN)],
-  ]);
-
-  await ctx.editMessageText(translations.think_of_a_code, {
-    ...keyboard,
-  });
 });
 
 // Стертя на етапі відгадування коду
@@ -229,11 +219,12 @@ bot.action(DELETE_BTN, async (ctx, next) => {
   await ctx.answerCbQuery(`Ваш код: ${currentGame.currentCheckCombination}`);
 
   const keyboard = Markup.inlineKeyboard([
-    createColorsButtons(splitEmoji(currentGame.currentCheckCombination)),
-    [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(START_BTN, START_BTN)],
+    createColorsButtons([]),
+    [Markup.button.callback(DELETE_BTN, DELETE_BTN), Markup.button.callback(CHECK_CODE_BTN, CHECK_CODE_BTN)],
   ]);
+  const messageText = `${translations.guessed_combinations}${getCheckCombinations(currentGame)}\n${translations.current_code}${currentGame.currentCheckCombination}`;
 
-  await ctx.editMessageText(translations.code_ready, {
+  await ctx.editMessageText(messageText, {
     ...keyboard,
   });
 });
@@ -288,8 +279,8 @@ bot.action(CHECK_CODE_BTN, async (ctx) => {
     rightColorTemplate.repeat(rightColorCount) + rightColorAndPlaceTemplate.repeat(rightColorAndPlaceCount);
 
   const newCheckCombinations = currentGame.checkCombinations
-    ? `${currentGame.currentCheckCombination} - ${resultTemplate}`
-    : `${currentGame.checkCombinations}${CHECK_CODE_DIVIDER}${currentGame.currentCheckCombination} - ${resultTemplate}`;
+    ? `${currentGame.checkCombinations}${CHECK_CODE_DIVIDER}${currentGame.currentCheckCombination} - ${resultTemplate}`
+    : `${currentGame.currentCheckCombination} - ${resultTemplate}`;
 
   await currentGame.update({
     checkCombinations: newCheckCombinations,
