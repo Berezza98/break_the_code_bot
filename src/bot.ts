@@ -88,6 +88,10 @@ bot.action(COLORS, async (ctx, next) => {
     return await ctx.answerCbQuery(`Код має містити ${CODE_LENGTH} кольорів. Ваш код: ${currentGame.code}`);
   }
 
+  if (splitEmoji(currentGame.code).includes(selectedColor)) {
+    return await ctx.answerCbQuery(`Код вже містить даний колір ${selectedColor}`);
+  }
+
   await currentGame.update({
     code: currentGame.code + selectedColor,
   });
